@@ -1,0 +1,1 @@
+cmd_/home/debajyoti/AdvancedOS/Module.symvers := sed 's/ko$$/o/' /home/debajyoti/AdvancedOS/modules.order | scripts/mod/modpost -m -a   -o /home/debajyoti/AdvancedOS/Module.symvers -e -i Module.symvers   -T -

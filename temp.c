@@ -14,7 +14,7 @@ int main()
     int fd, fd2, pid;
     char filename[100] = "/proc/partb_1_18CS30051";
     pid = fork();
-    //fork(); //uncomment this to check for >2 processes
+    fork(); //uncomment this to check for >2 processes
     if (pid == 0)
     {
         printf("%d Opening File\n", getpid());
@@ -52,12 +52,13 @@ int main()
         x = write(fd, &a, sizeof(int));
         a = 12;
         x = write(fd, &a, sizeof(int));
-        a = 101;
+
+        //to check for error on excess write
         x = write(fd, &a, sizeof(int));
-        printf("%d Writing to file : %d\n", getpid(), errno);
-        a = 99;
-        x = write(fd, &a, sizeof(int));
-        printf("%d Writing to file : %d\n", getpid(), errno);
+        if (x < 0)
+        {
+            printf("%d performed excess write\n", getpid());
+        }
 
         read(fd, &a, sizeof(int));
         printf("%d read %d expected 9\n", getpid(), a); //expected 9
@@ -68,11 +69,6 @@ int main()
         printf("%d read %d expected 10\n", getpid(), a); //expected 10
         read(fd, &a, sizeof(int));
         printf("%d read %d expected 12\n", getpid(), a); //expected 12
-
-        read(fd, &a, sizeof(int));
-        printf("%d read %d expected ERROR\n", getpid(), a);
-        read(fd, &a, sizeof(int));
-        printf("%d read %d expected ERROR\n", getpid(), a);
 
         printf("%d Closing file\n", getpid());
         close(fd);
@@ -131,12 +127,18 @@ int main()
 
         a = 17;
         x = write(fd, &a, sizeof(int));
-
         //sleep(2); //uncomment this for proper printing
         read(fd, &a, sizeof(int));
         printf("%d read %d expected 17\n", getpid(), a);
         read(fd, &a, sizeof(int));
         printf("%d read %d expected 20\n", getpid(), a);
+
+        //to check for error on excess read
+        x = read(fd, &a, sizeof(int));
+        if (x < 0)
+        {
+            printf("%d performed excess read\n", getpid());
+        }
 
         printf("%d Closing file\n", getpid());
         close(fd);

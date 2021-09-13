@@ -102,6 +102,7 @@ struct ListNode *insert_front(struct Deque *deque, int data);
 struct ListNode *insert_rear(struct Deque *deque, int data);
 bool delete_front(struct Deque *deque);
 void delete_deque(struct Deque *deque);
+void print_deque(struct Deque *deque);
 static int init_proc_deque(size_t process_index);
 static int insert_proc_deque(size_t process_index);
 
@@ -254,6 +255,7 @@ exit_file_close:
 ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset)
 {
     err_code = 0;
+    mutex_lock(&read_write_mutex);
     process_index = get_list_index(current->pid);
 
     // Process not found
@@ -265,9 +267,11 @@ ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset)
 
     // empty buffer
     if (!buf || !len)
-        return -EINVAL;
+    {
+        err_code = -EINVAL;
+        goto exit_file_read;
+    }
 
-    mutex_lock(&read_write_mutex);
     buffer_len = len < MAX_BUFF_SIZE ? len : MAX_BUFF_SIZE;
     err_code = handle_read(process_index);
 
@@ -276,16 +280,16 @@ ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset)
     if (!err_code)
         err_code = buffer_len;
 
-    mutex_unlock(&read_write_mutex);
-
     // Return the error code
 exit_file_read:
+    mutex_unlock(&read_write_mutex);
     return err_code;
 }
 
 ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offset)
 {
     err_code = 0;
+    mutex_lock(&read_write_mutex);
     process_index = get_list_index(current->pid);
 
     // Process not found
@@ -297,9 +301,11 @@ ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offse
 
     // empty buffer
     if (!buf || !len)
-        return -EINVAL;
+    {
+        err_code = -EINVAL;
+        goto exit_file_write;
+    }
 
-    mutex_lock(&read_write_mutex);
     buffer_len = len < MAX_BUFF_SIZE ? len : MAX_BUFF_SIZE;
 
     if (copy_from_user(buffer, buf, buffer_len))
@@ -309,10 +315,10 @@ ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offse
         err_code = handle_write(process_index);
     if (!err_code)
         err_code = buffer_len;
-    mutex_unlock(&read_write_mutex);
 
     // Return the error code
 exit_file_write:
+    mutex_unlock(&read_write_mutex);
     return err_code;
 }
 
@@ -374,7 +380,6 @@ static size_t handle_read(size_t process_index)
         data = left_elem->data;
         if (!delete_front(process_list->process_queue[process_index].proc_deque))
         {
-            buffer[0] = -1;
             return -EACCES;
         }
         strncpy(buffer, (const char *)&data, sizeof(int));
@@ -383,7 +388,6 @@ static size_t handle_read(size_t process_index)
     }
     else
     {
-        buffer[0] = -1;
         return -EACCES;
     }
 
@@ -491,14 +495,14 @@ struct ListNode *insert_front(struct Deque *deque, int data)
 {
     if (deque->size == deque->max_size)
     {
-        printk(KERN_ALERT "Deque is full\n");
+        printk(KERN_ALERT "Deque is full for pid [%d]\n", current->pid);
         return NULL;
     }
 
     new_node = create_node(data);
     if (new_node == NULL)
     {
-        printk(KERN_ALERT "Cannot insert node\n");
+        printk(KERN_INFO "Cannot insert node for pid [%d]\n", current->pid);
         return NULL;
     }
     if (deque->size == 0)
@@ -512,6 +516,7 @@ struct ListNode *insert_front(struct Deque *deque, int data)
         deque->front_ptr = new_node;
     }
     deque->size++;
+    print_deque(deque);
     return new_node;
 }
 
@@ -529,14 +534,14 @@ struct ListNode *insert_rear(struct Deque *deque, int data)
 {
     if (deque->size == deque->max_size)
     {
-        printk(KERN_ALERT "Deque is full\n");
+        printk(KERN_ALERT "Deque is full for pid [%d]\n", current->pid);
         return NULL;
     }
 
     new_node = create_node(data);
     if (new_node == NULL)
     {
-        printk(KERN_ALERT "Cannot insert node\n");
+        printk(KERN_INFO "Cannot insert node for pid [%d]\n", current->pid);
         return NULL;
     }
     if (deque->size == 0)
@@ -550,7 +555,27 @@ struct ListNode *insert_rear(struct Deque *deque, int data)
         deque->rear_ptr = new_node;
     }
     deque->size++;
+    print_deque(deque);
     return new_node;
+}
+
+/**
+ * @brief Function to print the deque
+ * @details This function is used to print the deque.
+ * @param deque Pointer to the deque
+ * @return Returns void
+ * @note This function is called with the read_write_mutex locked
+ */
+
+void print_deque(struct Deque *deque)
+{
+    struct ListNode *temp = deque->front_ptr;
+    printk(KERN_INFO "[Proc : %d] Deque size [%d]\n", current->pid, deque->size);
+    while (temp != NULL)
+    {
+        printk(KERN_INFO "Node data [%d]\n", temp->data);
+        temp = temp->next;
+    }
 }
 
 /**

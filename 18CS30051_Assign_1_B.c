@@ -192,8 +192,8 @@ void init_process_list(void)
 
 int file_open(struct inode *inode, struct file *file)
 {
-    err_code = 0;
     mutex_lock(&open_close_mutex);
+    err_code = 0;
 
     process_index = get_list_index(current->pid);
 
@@ -215,13 +215,14 @@ int file_open(struct inode *inode, struct file *file)
     // Return the error code
 exit_file_open:
     mutex_unlock(&open_close_mutex);
+
     return err_code;
 }
 
 int file_close(struct inode *inode, struct file *file)
 {
-    err_code = 0;
     mutex_lock(&open_close_mutex);
+    err_code = 0;
 
     process_index = get_list_index(current->pid);
 
@@ -254,8 +255,8 @@ exit_file_close:
 
 ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset)
 {
-    err_code = 0;
     mutex_lock(&read_write_mutex);
+    err_code = 0;
     process_index = get_list_index(current->pid);
 
     // Process not found
@@ -288,8 +289,8 @@ exit_file_read:
 
 ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offset)
 {
-    err_code = 0;
     mutex_lock(&read_write_mutex);
+    err_code = 0;
     process_index = get_list_index(current->pid);
 
     // Process not found
@@ -316,6 +317,7 @@ ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offse
     if (!err_code)
         err_code = buffer_len;
 
+    // printk(KERN_INFO "Process [%d] wrote [%d] code [%d]\n", current->pid, buffer[0], err_code);
     // Return the error code
 exit_file_write:
     mutex_unlock(&read_write_mutex);
@@ -390,9 +392,6 @@ static size_t handle_read(size_t process_index)
     {
         return -EACCES;
     }
-
-    // Copy the data to the buffer
-    buffer[0] = '\0';
     return 0;
 }
 
@@ -516,7 +515,7 @@ struct ListNode *insert_front(struct Deque *deque, int data)
         deque->front_ptr = new_node;
     }
     deque->size++;
-    print_deque(deque);
+    // print_deque(deque);
     return new_node;
 }
 
@@ -555,7 +554,7 @@ struct ListNode *insert_rear(struct Deque *deque, int data)
         deque->rear_ptr = new_node;
     }
     deque->size++;
-    print_deque(deque);
+    // print_deque(deque);
     return new_node;
 }
 
@@ -637,9 +636,11 @@ static int init_proc_deque(size_t process_index)
     if (buffer_len > sizeof(char))
     {
         printk(KERN_ALERT "Buffer length is too large\n");
-        return -EINVAL;
+        err_code = -EINVAL;
+        goto out;
     }
 
+    err_code = 0;
     deque_size = (size_t)buffer[0];
     if (deque_size < 1 || deque_size > 100)
     {
@@ -647,7 +648,17 @@ static int init_proc_deque(size_t process_index)
         return -EINVAL;
     }
 
-    return ((process_list->process_queue[process_index].proc_deque = create_deque(deque_size)) != NULL ? 0 : -EINVAL);
+    err_code = ((process_list->process_queue[process_index].proc_deque = create_deque(deque_size)) != NULL ? 0 : -EINVAL);
+
+    if (err_code != 0)
+    {
+        printk(KERN_ALERT "Cannot initialize deque\n");
+        goto out;
+    }
+
+    printk(KERN_INFO "Deque initialized for process [%d]\n", current->pid);
+out:
+    return err_code;
 }
 
 /**
@@ -661,21 +672,25 @@ static int init_proc_deque(size_t process_index)
 
 static int insert_proc_deque(size_t process_index)
 {
+    err_code = 0;
     if (buffer_len != sizeof(int32_t))
     {
-        return -EINVAL;
+        err_code = -EINVAL;
+        goto exit;
     }
 
     data = *(int32_t *)buffer;
+    printk(KERN_INFO "Inserting [%d] into deque for process [%d]\n", data, current->pid);
 
     if (data % 2 == 0)
     {
-        return ((insert_rear(process_list->process_queue[process_index].proc_deque, data) != NULL) ? buffer_len : -EACCES);
+        err_code = ((insert_rear(process_list->process_queue[process_index].proc_deque, data) != NULL) ? buffer_len : -EACCES);
     }
     else
     {
-        return ((insert_front(process_list->process_queue[process_index].proc_deque, data) != NULL) ? buffer_len : -EACCES);
+        err_code = ((insert_front(process_list->process_queue[process_index].proc_deque, data) != NULL) ? buffer_len : -EACCES);
     }
 
-    return 0;
+exit:
+    return err_code;
 }

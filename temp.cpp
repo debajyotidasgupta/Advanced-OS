@@ -7,8 +7,8 @@ using namespace std;
 
 #define int int32_t
 #define PROCNAME "/proc/partb_1_18CS30051"
-#define MAX_CAPACITY 100
-#define NUM_OPERATIONS 10005
+#define MAX_CAPACITY 10
+#define NUM_OPERATIONS 50
 #define NUM_FORKS 6
 
 int main()
@@ -29,7 +29,7 @@ int main()
     vector<char> opers;
     for (int i = 0; i < NUM_OPERATIONS; i++)
     {
-        int operation = dist2(rng);
+        int operation = dist2(rng) % 100;
         if (operation == 0)
         {
             // read

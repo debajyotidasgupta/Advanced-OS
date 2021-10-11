@@ -237,7 +237,7 @@ int file_open(struct inode *inode, struct file *file)
     // If the process is already opened or the process list is full and needs to be inserted
     if (process_index == MAX_PROCESS_LIMIT || process_list->process_queue[process_index].state != PROC_FILE_CLOSE)
     {
-        err_code = -EINVAL; // Too many files open
+        err_code = -EACCES; // Too many files open
         goto exit_file_open;
     }
 
@@ -560,7 +560,7 @@ static long file_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
     // Return the error code
 exit_file_ioctl:
-    print_deque(process_list->process_queue[process_index].proc_deque);
+    // print_deque(process_list->process_queue[process_index].proc_deque);
     mutex_unlock(&read_write_mutex);
     return err_code;
 }

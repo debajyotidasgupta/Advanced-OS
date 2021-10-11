@@ -495,8 +495,17 @@ static long file_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             goto exit_file_ioctl;
         }
 
+        if (process_list->process_queue[process_index].proc_deque->front_ptr)
+            data = process_list->process_queue[process_index].proc_deque->front_ptr->data;
         retval = delete_front(process_list->process_queue[process_index].proc_deque);
         if (!retval)
+        {
+            err_code = -EACCES;
+            goto exit_file_ioctl;
+        }
+        printk(KERN_ALERT "PID %d: PB2_POP_LEFT Popping %d from the deque\n", current->pid, data);
+        retval = copy_to_user((int32_t *)arg, &data, sizeof(int32_t));
+        if (retval)
         {
             err_code = -EACCES;
             goto exit_file_ioctl;
@@ -528,8 +537,17 @@ static long file_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             goto exit_file_ioctl;
         }
 
+        if (process_list->process_queue[process_index].proc_deque->rear_ptr)
+            data = process_list->process_queue[process_index].proc_deque->rear_ptr->data;
         retval = delete_rear(process_list->process_queue[process_index].proc_deque);
         if (!retval)
+        {
+            err_code = -EACCES;
+            goto exit_file_ioctl;
+        }
+        printk(KERN_ALERT "PID %d: PB2_POP_RIGHT Popping %d from the deque\n", current->pid, data);
+        retval = copy_to_user((int32_t *)arg, &data, sizeof(int32_t));
+        if (retval)
         {
             err_code = -EACCES;
             goto exit_file_ioctl;
@@ -542,6 +560,7 @@ static long file_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
     // Return the error code
 exit_file_ioctl:
+    print_deque(process_list->process_queue[process_index].proc_deque);
     mutex_unlock(&read_write_mutex);
     return err_code;
 }

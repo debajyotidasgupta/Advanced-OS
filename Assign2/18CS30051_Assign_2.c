@@ -662,14 +662,6 @@ size_t get_list_index(pid_t pid)
     // If the process id is not found, return the minimum index which is free
     for (iter = 0; iter < MAX_PROCESS_LIMIT; iter++)
     {
-        if (process_list->process_queue[iter].pid == pid && process_list->process_queue[iter].state == PROC_FILE_CLOSE)
-        {
-            return iter;
-        }
-    }
-
-    for (iter = 0; iter < MAX_PROCESS_LIMIT; iter++)
-    {
         if (process_list->process_queue[iter].pid == -1 || process_list->process_queue[iter].state == PROC_FILE_CLOSE)
         {
             return iter;

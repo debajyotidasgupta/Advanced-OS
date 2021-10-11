@@ -1,1 +1,0 @@
-cmd_/home/debajyoti/Advanced-OS/Assign2/18CS30051_Assign_2.ko := ld -r -m elf_x86_64  --build-id=sha1  -T scripts/module.lds -o /home/debajyoti/Advanced-OS/Assign2/18CS30051_Assign_2.ko /home/debajyoti/Advanced-OS/Assign2/18CS30051_Assign_2.o /home/debajyoti/Advanced-OS/Assign2/18CS30051_Assign_2.mod.o;  true

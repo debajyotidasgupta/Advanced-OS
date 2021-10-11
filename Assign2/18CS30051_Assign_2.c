@@ -891,6 +891,10 @@ struct ListNode *insert_rear(struct Deque *deque, int data)
 void print_deque(struct Deque *deque)
 {
     struct ListNode *temp = deque->front_ptr;
+    printk(KERN_INFO "\n");
+    printk(KERN_INFO "Deque size [%d]\n", deque->size);
+    printk(KERN_INFO "Deque max size [%d]\n", deque->max_size);
+
     printk(KERN_INFO "[Proc : %d] Deque size [%d]\n", current->pid, deque->size);
     while (temp != NULL)
     {

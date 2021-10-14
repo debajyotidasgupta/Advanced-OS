@@ -27,6 +27,9 @@ int main()
     int32_t fd, fd2, pid;
     char filename[100] = "/proc/cs60038_a2_18CS30051";
 
+    for (size_t i = 0; i < 2.; i++)
+        fork();
+
     printf("%d Opening File\n", getpid());
 
     fd = open(filename, O_RDWR);

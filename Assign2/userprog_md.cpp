@@ -27,7 +27,6 @@ int main()
     int32_t fd, fd2, pid;
     char filename[100] = "/proc/cs60038_a2_18CS30051";
     pid = fork();
-    //fork(); //uncomment this to check for >2 processes
     if (pid == 0)
     {
         printf("%d Opening File\n", getpid());
@@ -35,16 +34,24 @@ int main()
         if (fd < 0)
         {
             printf("%d Cannot open file...\n", getpid());
+            fflush(stdout);
             printf("%d Error= %d\n", getpid(), errno);
+            fflush(stdout);
             return 0;
         }
+        printf("Succesfully opened file");
+        fflush(stdout);
+
         fd2 = open(filename, O_RDWR);
         //check reopening for file
         if (fd2 < 0)
         {
             printf("%d Cannot open file again...\n", getpid());
+            fflush(stdout);
             printf("%d Error= %d\n", getpid(), errno);
+            fflush(stdout);
             printf("%d fd2=%d\n", getpid(), fd2);
+            fflush(stdout);
         }
         //7 9 10 12-> write order
         //9 7 10 12-> expected deque structure
@@ -60,7 +67,6 @@ int main()
         x = ioctl(fd, PB2_INSERT_LEFT, (int32_t *)&a);
         a = 9;
         x = ioctl(fd, PB2_INSERT_LEFT, (int32_t *)&a);
-        //sleep(2); //uncomment this for proper printing
         a = 10;
         x = ioctl(fd, PB2_INSERT_RIGHT, (int32_t *)&a);
         a = 12;
@@ -75,13 +81,16 @@ int main()
 
         ioctl(fd, PB2_POP_LEFT, (int32_t *)&a);
         printf("%d read %d expected 9\n", getpid(), a); //expected 9
+        fflush(stdout);
         ioctl(fd, PB2_POP_RIGHT, (int32_t *)&a);
         printf("%d read %d expected 12\n", getpid(), a); //expected 12
-        //sleep(2); //uncomment this for proper printing
+        fflush(stdout);
         ioctl(fd, PB2_POP_RIGHT, (int32_t *)&a);
         printf("%d read %d expected 10\n", getpid(), a); //expected 10
+        fflush(stdout);
         ioctl(fd, PB2_POP_LEFT, (int32_t *)&a);
         printf("%d read %d expected 7\n", getpid(), a); //expected 7
+        fflush(stdout);
 
         printf("%d Closing file\n", getpid());
         close(fd);
@@ -91,22 +100,28 @@ int main()
         if (fd >= 0)
         {
             printf("%d successfully reopened after close\n", getpid());
+            fflush(stdout);
             close(fd);
         }
         else
         {
             printf("%d could not reopen after close\n", getpid());
+            fflush(stdout);
         }
         return 0;
     }
     else if (pid > 0)
     {
+        fflush(stdout);
         printf("%d Opening File\n", getpid());
+        fflush(stdout);
         fd = open(filename, O_RDWR);
         if (fd < 0)
         {
             printf("%d Cannot open file...\n", getpid());
+            fflush(stdout);
             printf("%d Error= %d\n", getpid(), errno);
+            fflush(stdout);
             return 0;
         }
         int32_t a = 4;
@@ -116,12 +131,14 @@ int main()
         if ((x = ioctl(fd, PB2_SET_CAPACITY, (int32_t *)&b)) < 0)
         {
             printf("%d Size error %d\n", getpid(), errno);
+            fflush(stdout);
             return 0;
         }
         //this should return error on writing 3 bytes
         if ((x = ioctl(fd, PB2_INSERT_LEFT, str)) < 0)
         {
             printf("%d %d write error on string of length 3\n", getpid(), errno);
+            fflush(stdout);
         }
         //11 19 20 17 -> write order
         // //19 11 17 20 -> expected read order
@@ -136,35 +153,44 @@ int main()
         struct obj_info obj_info;
         x = ioctl(fd, PB2_GET_INFO, &obj_info);
         printf("%d size %d expected 3\n", getpid(), obj_info.deque_size);
+        fflush(stdout);
         printf("%d capacity %d expected 4\n", getpid(), obj_info.capacity);
+        fflush(stdout);
 
         ioctl(fd, PB2_POP_LEFT, (int32_t *)&a);
         printf("%d read %d expected 19\n", getpid(), a);
+        fflush(stdout);
         ioctl(fd, PB2_POP_RIGHT, (int32_t *)&a);
         printf("%d read %d expected 20\n", getpid(), a);
+        fflush(stdout);
 
         a = 17;
         x = ioctl(fd, PB2_INSERT_LEFT, (int32_t *)&a);
         // //sleep(2); //uncomment this for proper printing
         x = ioctl(fd, PB2_POP_LEFT, (int32_t *)&a);
         printf("%d read %d expected 17\n", getpid(), a);
+        fflush(stdout);
         x = ioctl(fd, PB2_POP_LEFT, (int32_t *)&a);
         printf("%d read %d expected 11\n", getpid(), a);
-
+        fflush(stdout);
         b = 6;
         x = ioctl(fd, PB2_SET_CAPACITY, &b);
         x = ioctl(fd, PB2_GET_INFO, &obj_info);
         printf("%d size %d expected 0\n", getpid(), obj_info.deque_size);
+        fflush(stdout);
         printf("%d capacity %d expected 6\n", getpid(), obj_info.capacity);
+        fflush(stdout);
 
         //to check for error on excess read
         x = ioctl(fd, PB2_POP_LEFT, (int32_t *)&a);
         if (x < 0)
         {
             printf("%d performed excess read\n", getpid());
+            fflush(stdout);
         }
 
         printf("%d Closing file\n", getpid());
+        fflush(stdout);
         close(fd);
 
         return 0;

@@ -29,7 +29,7 @@ MODULE_DESCRIPTION("LKM for Deque");
 MODULE_VERSION("0.1");
 
 #define PROC_FILENAME "cs60038_a2_18CS30051"
-#define PROCESS_LIMIT 1024
+#define PROCESS_LIMIT 100000
 #define BUFF_SIZE 256
 
 #define PB2_SET_CAPACITY _IOW(0x10, 0x31, int32_t *)
@@ -273,14 +273,14 @@ int file_open(struct inode *inode, struct file *file)
             }
             else
             {
+                printk(KERN_ALERT "[%d] Deque LKM: File Opened\n", pid);
                 ret = 0;
             }
         }
     }
 
-    printk(KERN_ALERT "[%d] Deque LKM: File Opened\n", pid);
     mutex_unlock(&mutex);
-    return 0;
+    return ret;
 }
 
 int file_close(struct inode *inode, struct file *file)
@@ -309,12 +309,12 @@ int file_close(struct inode *inode, struct file *file)
         process_list[index]->deque = NULL;
         kfree(process_list[index]);
         process_list[index] = NULL;
+        printk(KERN_ALERT "[%d] Deque LKM: File Closed\n", pid);
         ret = 0;
     }
 
-    printk(KERN_ALERT "[%d] Deque LKM: File Closed\n", pid);
     mutex_unlock(&mutex);
-    return 0;
+    return ret;
 }
 
 ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset) { return 0; }
@@ -352,7 +352,7 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             ret = -EACCES;
             goto out;
         }
-        if (data > 100 || data < 0)
+        if (capacity > 100 || capacity < 0)
         {
             ret = -EINVAL;
             goto out;
@@ -518,7 +518,7 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             goto out;
         }
 
-        ret = copy_to_user((struct obj_info *)args, &info, sizeof(struct obj_info));
+        ret = copy_to_user((struct obj_info *)args, info, sizeof(struct obj_info));
         if (ret != 0)
         {
             printk(KERN_ALERT "copy_to_user failed\n");

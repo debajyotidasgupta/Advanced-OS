@@ -39,7 +39,7 @@ int main()
             fflush(stdout);
             return 0;
         }
-        printf("Succesfully opened file");
+        printf("Succesfully opened file\n");
         fflush(stdout);
 
         fd2 = open(filename, O_RDWR);
@@ -135,7 +135,7 @@ int main()
             return 0;
         }
         //this should return error on writing 3 bytes
-        if ((x = ioctl(fd, PB2_INSERT_LEFT, str)) < 0)
+        if ((x = ioctl(fd, PB2_INSERT_LEFT, str)) != 0)
         {
             printf("%d %d write error on string of length 3\n", getpid(), errno);
             fflush(stdout);

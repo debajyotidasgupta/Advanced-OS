@@ -250,7 +250,7 @@ int file_open(struct inode *inode, struct file *file)
         printk(KERN_ALERT "Process not found\n");
         ret = -EACCES;
     }
-    else if (process_list[index]->deque != NULL && process_list[index]->pid == pid)
+    else if (process_list[index] != NULL)
     {
         printk(KERN_ALERT "Process already exists\n");
         ret = -EACCES;
@@ -298,7 +298,7 @@ int file_close(struct inode *inode, struct file *file)
         printk(KERN_ALERT "Process not found\n");
         ret = -EACCES;
     }
-    else if (process_list[index]->deque == NULL || process_list[index]->pid != pid)
+    else if (process_list[index] == NULL)
     {
         printk(KERN_ALERT "Process not found\n");
         ret = -EACCES;

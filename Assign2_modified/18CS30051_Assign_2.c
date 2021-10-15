@@ -227,10 +227,11 @@ int pop_left(struct Deque *deque, int32_t *data)
     return 0;
 }
 
-int get_info(struct Deque *deque, struct obj_info *info)
+int get_info(struct Deque *deque, struct obj_info **info)
 {
-    info->deque_size = deque->size;
-    info->capacity = deque->capacity;
+    (*info) = (struct obj_info *)kmalloc(sizeof(struct obj_info), GFP_KERNEL);
+    (*info)->deque_size = deque->size;
+    (*info)->capacity = deque->capacity;
     return 0;
 }
 
@@ -246,6 +247,8 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
     int32_t capacity;
     int32_t data;
     int32_t index;
+
+    struct obj_info *info;
 
     mutex_lock(&mutex);
 
@@ -267,6 +270,11 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
         {
             printk(KERN_ALERT "copy_from_user failed\n");
             ret = -EACCES;
+            goto out;
+        }
+        if (data > 100 || data < 0)
+        {
+            err = -EINVAL;
             goto out;
         }
         index = get_process_index(pid);
@@ -300,7 +308,16 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             ret = -EACCES;
             goto out;
         }
-        ret = push_left(process_list[get_process_index(pid)]->deque, data);
+
+        index = get_process_index(pid);
+        if (index == -1 || process_list[index] == NULL)
+        {
+            printk(KERN_ALERT "process not found\n");
+            ret = -EACCES;
+            goto out;
+        }
+
+        ret = push_left(process_list[index]->deque, data);
         if (ret != 0)
         {
             printk(KERN_ALERT "push_left failed\n");
@@ -323,7 +340,15 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             ret = -EACCES;
             goto out;
         }
-        ret = push_right(process_list[get_process_index(pid)]->deque, data);
+
+        index = get_process_index(pid);
+        if (index == -1 || process_list[index] == NULL)
+        {
+            printk(KERN_ALERT "process not found\n");
+            ret = -EACCES;
+            goto out;
+        }
+        ret = push_right(process_list[index]->deque, data);
         if (ret != 0)
         {
             printk(KERN_ALERT "push_right failed\n");
@@ -331,8 +356,93 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             goto out;
         }
         break;
-    case PB2_EXTRACT_LEFT:;
-    case PB2_EXTRACT_RIGHT:;
+    case PB2_EXTRACT_LEFT:
+        index = get_process_index(pid);
+        if (index == -1 || process_list[index] == NULL)
+        {
+            printk(KERN_ALERT "process not found\n");
+            ret = -EACCES;
+            goto out;
+        }
+        ret = pop_left(process_list[index]->deque, &data);
+        if (ret != 0)
+        {
+            printk(KERN_ALERT "pop_left failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+        if (!access_ok((int32_t *)arg, sizeof(int32_t)))
+        {
+            printk(KERN_ALERT "access_ok failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+        ret = copy_to_user((int *)args, &data, sizeof(int));
+        if (ret != 0)
+        {
+            printk(KERN_ALERT "copy_to_user failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+    case PB2_EXTRACT_RIGHT:
+        index = get_process_index(pid);
+        if (index == -1 || process_list[index] == NULL)
+        {
+            printk(KERN_ALERT "process not found\n");
+            ret = -EACCES;
+            goto out;
+        }
+        ret = pop_right(process_list[index]->deque, &data);
+        if (ret != 0)
+        {
+            printk(KERN_ALERT "pop_right failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+        if (!access_ok((int32_t *)arg, sizeof(int32_t)))
+        {
+            printk(KERN_ALERT "access_ok failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+        ret = copy_to_user((int *)args, &data, sizeof(int));
+        if (ret != 0)
+        {
+            printk(KERN_ALERT "copy_to_user failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+    case PB2_GET_INFO:
+        index = get_process_index(pid);
+        if (index == -1 || process_list[index] == NULL)
+        {
+            printk(KERN_ALERT "process not found\n");
+            ret = -EACCES;
+            goto out;
+        }
+
+        ret = get_info(process_list[index]->deque, &info);
+        if (ret != 0)
+        {
+            printk(KERN_ALERT "get_info failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+
+        if (!access_ok((struct obj_info *)arg, sizeof(struct obj_info)))
+        {
+            printk(KERN_ALERT "access_ok failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+
+        ret = copy_to_user((struct obj_info *)args, &info, sizeof(struct obj_info));
+        if (ret != 0)
+        {
+            printk(KERN_ALERT "copy_to_user failed\n");
+            ret = -EACCES;
+            goto out;
+        }
     default:
         printk(KERN_ALERT "Invalid Command\n");
         ret = -EINVAL;

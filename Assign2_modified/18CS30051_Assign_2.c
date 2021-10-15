@@ -29,8 +29,8 @@ MODULE_DESCRIPTION("LKM for Deque");
 MODULE_VERSION("0.1");
 
 #define PROC_FILENAME "cs60038_a2_18CS30051"
-#define PROCESS_LIMIT 100000
-#define BUFF_SIZE 256
+#define PROCESS_LIMIT 10000
+#define DEFAULT_SIZE 256
 
 #define PB2_SET_CAPACITY _IOW(0x10, 0x31, int32_t *)
 #define PB2_INSERT_RIGHT _IOW(0x10, 0x32, int32_t *)
@@ -317,8 +317,122 @@ int file_close(struct inode *inode, struct file *file)
     return ret;
 }
 
-ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset) { return 0; }
-ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offset) { return 0; }
+ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset)
+{
+    int32_t ret;
+    int32_t pid;
+    int32_t data;
+    int32_t index;
+
+    mutex_lock(&mutex);
+    pid = current->pid;
+    index = get_process_index(pid);
+
+    if (index == -1 || process_list[index] == NULL)
+    {
+        printk(KERN_ALERT "process not found\n");
+        ret = -EACCES;
+        goto out;
+    }
+
+    ret = pop_left(process_list[index]->deque, &data);
+    if (ret != 0)
+    {
+        printk(KERN_ALERT "pop_left failed\n");
+        ret = -EACCES;
+        goto out;
+    }
+    if (!access_ok((int32_t *)buf, sizeof(int32_t)))
+    {
+        printk(KERN_ALERT "access_ok failed\n");
+        ret = -EACCES;
+        goto out;
+    }
+    ret = copy_to_user((int32_t *)buf, &data, sizeof(int32_t));
+    if (ret != 0)
+    {
+        printk(KERN_ALERT "copy_to_user failed\n");
+        ret = -EACCES;
+        goto out;
+    }
+    else
+        ret = sizeof(int32_t);
+
+out:
+    mutex_unlock(&mutex);
+    return ret;
+}
+
+ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offset)
+{
+    int32_t ret;
+    int32_t pid;
+    int32_t data;
+    int32_t index;
+
+    mutex_lock(&mutex);
+    pid = current->pid;
+    index = get_process_index(pid);
+
+    if (len != sizeof(int32_t))
+    {
+        ret = -EFAULT;
+        goto out;
+    }
+
+    ret = access_ok((int *)buf, sizeof(int));
+    if (ret == 0)
+    {
+        printk(KERN_ALERT "access_ok failed\n");
+        ret = -EACCES;
+        goto out;
+    }
+
+    ret = copy_from_user(&data, (int32_t *)buf, sizeof(int32_t));
+    if (ret != 0)
+    {
+        printk(KERN_ALERT "copy_from_user failed\n");
+        ret = -EACCES;
+        goto out;
+    }
+
+    index = get_process_index(pid);
+    if (index == -1 || process_list[index] == NULL)
+    {
+        printk(KERN_ALERT "process not found\n");
+        ret = -EACCES;
+        goto out;
+    }
+
+    printk(KERN_ALERT "[%d] Deque LKM: %d [%d]\n", pid, data, process_list[index]->deque != NULL);
+    if (process_list[index]->deque->capacity == 0)
+    {
+        if (data < 1 || data > 100)
+        {
+            printk(KERN_ALERT "Invalid data\n");
+            ret = -EINVAL;
+            goto out;
+        }
+        ret = set_capacity(&(process_list[index]->deque), data);
+    }
+    else if (data % 2 == 0)
+        ret = push_right(process_list[index]->deque, data);
+    else
+        ret = push_left(process_list[index]->deque, data);
+
+    if (ret != 0)
+    {
+        printk(KERN_ALERT "push failed\n");
+        ret = -EACCES;
+        goto out;
+    }
+    else
+        ret = sizeof(int32_t);
+
+out:
+    mutex_unlock(&mutex);
+    return ret;
+}
 
 long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
 {

@@ -41,14 +41,26 @@ MODULE_VERSION("0.1");
 
 DEFINE_MUTEX(mutex);
 
+/**
+ * @brief Structure to store the process information
+ * data: process deque
+ * next: pointer to the next process
+ * prev: pointer to the previous process
+ * pid: process id
+ * priority: process priority
+ */
 struct Deque
 {
-    int32_t *data;
-    int32_t capacity;
-    int32_t size;
-    int32_t front;
-    int32_t rear;
+    int32_t *data;    //!< process deque
+    int32_t capacity; //!< process deque capacity
+    int32_t size;     //!< process deque size
+    int32_t front;    //!< front of the process deque
+    int32_t rear;     //!< rear of the process deque
 };
+
+/**
+ *  @brief info about the deque of the process
+ */
 
 struct obj_info
 {
@@ -56,25 +68,35 @@ struct obj_info
     int32_t capacity;   // maximum capacity of the deque
 };
 
+/**
+ * @brief Structure to store the process information
+ */
+
 struct process
 {
-    int pid;
-    struct Deque *deque;
+    int pid;             //!< process id
+    struct Deque *deque; //!< process deque
 };
 
-struct process *process_list[PROCESS_LIMIT];
-static struct proc_ops file_ops;
+struct process *process_list[PROCESS_LIMIT]; //!< process list
+static struct proc_ops file_ops;             //!< proc file operations
 
-int get_process_index(int pid);
-void createProc(struct process **proc, int pid);
-void createDeque(struct Deque **deque, int32_t capacity);
-int set_capacity(struct Deque **deque, int32_t capacity);
+/******************************************************************************/
+/*                                                                           */
+/*                         UTILITY FUNCTIONS                                 */
+/*                                                                           */
+/******************************************************************************/
 
-int push_right(struct Deque *deque, int32_t data);
-int push_left(struct Deque *deque, int32_t data);
-int pop_right(struct Deque *deque, int32_t *data);
-int pop_left(struct Deque *deque, int32_t *data);
-int get_info(struct Deque *deque, struct obj_info **info);
+int get_process_index(int pid);                           //!< get process index
+void createProc(struct process **proc, int pid);          //!< create process
+void createDeque(struct Deque **deque, int32_t capacity); //!< create deque
+int set_capacity(struct Deque **deque, int32_t capacity); //!< set deque capacity
+
+int push_right(struct Deque *deque, int32_t data);         //!< push data to the right
+int push_left(struct Deque *deque, int32_t data);          //!< push data to the left
+int pop_right(struct Deque *deque, int32_t *data);         //!< pop data from the right
+int pop_left(struct Deque *deque, int32_t *data);          //!< pop data from the left
+int get_info(struct Deque *deque, struct obj_info **info); //!< get deque info
 
 static int file_open(struct inode *inode, struct file *file);                              // Handles the open request
 static int file_close(struct inode *inode, struct file *file);                             // Handles the close request
@@ -112,6 +134,20 @@ static void __exit lkm_exit(void)
 module_init(lkm_init);
 module_exit(lkm_exit);
 
+/******************************************************************************/
+/*                                                                           */
+/*                          FILE OPERATIONS                                  */
+/*                                                                           */
+/******************************************************************************/
+
+/**
+ * @brief retrieves the process index
+ * @param pid process id
+ * @return index of the process
+ * @retval -1 if process not found
+ * @retval index of the process if found
+ */
+
 int get_process_index(int pid)
 {
     int i;
@@ -128,6 +164,13 @@ int get_process_index(int pid)
     return -1;
 }
 
+/**
+ * @brief creates a process
+ * @param proc pointer to the process
+ * @param pid process id
+ * @return void
+ */
+
 void createProc(struct process **proc, int pid)
 {
     (*proc) = (struct process *)kmalloc(sizeof(struct process), GFP_KERNEL);
@@ -136,6 +179,13 @@ void createProc(struct process **proc, int pid)
     (*proc)->pid = pid;
     (*proc)->deque = NULL;
 }
+
+/**
+ * @brief creates a deque
+ * @param deque pointer to the deque
+ * @param capacity deque capacity
+ * @return void
+ */
 
 void createDeque(struct Deque **deque, int32_t capacity)
 {
@@ -149,6 +199,14 @@ void createDeque(struct Deque **deque, int32_t capacity)
     (*deque)->rear = -1;
 }
 
+/**
+ * @brief sets the deque capacity
+ * @param deque pointer to the deque
+ * @param capacity deque capacity
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+
 int set_capacity(struct Deque **deque, int32_t capacity)
 {
     if (*deque != NULL)
@@ -158,6 +216,14 @@ int set_capacity(struct Deque **deque, int32_t capacity)
         return -1;
     return 0;
 }
+
+/**
+ * @brief pushes data to the right
+ * @param deque pointer to the deque
+ * @param data data to be pushed
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
 
 int push_right(struct Deque *deque, int32_t data)
 {
@@ -180,6 +246,14 @@ int push_right(struct Deque *deque, int32_t data)
     return 0;
 }
 
+/**
+ * @brief pushes data to the left
+ * @param deque pointer to the deque
+ * @param data data to be pushed
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+
 int push_left(struct Deque *deque, int32_t data)
 {
     if (deque->size == deque->capacity)
@@ -201,6 +275,14 @@ int push_left(struct Deque *deque, int32_t data)
     return 0;
 }
 
+/**
+ * @brief pops data from the right
+ * @param deque pointer to the deque
+ * @param data popped
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
+
 int pop_right(struct Deque *deque, int32_t *data)
 {
     if (deque->size == 0)
@@ -213,6 +295,15 @@ int pop_right(struct Deque *deque, int32_t *data)
     deque->size--;
     return 0;
 }
+
+/**
+ * @brief pops data from the left
+ * @details if the deque is empty, it returns -1
+ * @param deque pointer to the deque
+ * @param data popped
+ * @retval 0 on success
+ * @retval -1 on failure
+ */
 
 int pop_left(struct Deque *deque, int32_t *data)
 {
@@ -227,6 +318,14 @@ int pop_left(struct Deque *deque, int32_t *data)
     return 0;
 }
 
+/**
+ * @brief gets the info abouit the deque
+ * @details prints the deque info
+ * @param deque pointer to the deque
+ * @param info pointer for storing return data
+ * @retval 0 on success
+ */
+
 int get_info(struct Deque *deque, struct obj_info **info)
 {
     (*info) = (struct obj_info *)kmalloc(sizeof(struct obj_info), GFP_KERNEL);
@@ -234,6 +333,14 @@ int get_info(struct Deque *deque, struct obj_info **info)
     (*info)->capacity = deque->capacity;
     return 0;
 }
+
+/**
+ * @brief Function to handle the file open operation
+ * @details This function is called whenever the user wants to open the file
+ * @param inode
+ * @param file
+ * @return 0 on success
+ */
 
 int file_open(struct inode *inode, struct file *file)
 {
@@ -283,6 +390,14 @@ int file_open(struct inode *inode, struct file *file)
     return ret;
 }
 
+/**
+ * @brief Function to handle the file close operation
+ * @details This function is called when the file is closed
+ * @param inode
+ * @param file
+ * @return 0 on success
+ */
+
 int file_close(struct inode *inode, struct file *file)
 {
     int32_t ret;
@@ -316,6 +431,16 @@ int file_close(struct inode *inode, struct file *file)
     mutex_unlock(&mutex);
     return ret;
 }
+
+/**
+ * @brief Function to handle the file read operation
+ * @details This function is called when the device is read from
+ * @param file
+ * @param buf
+ * @param count
+ * @param f_pos
+ * @return 0 on success
+ */
 
 ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset)
 {
@@ -363,40 +488,31 @@ out:
     return ret;
 }
 
+/**
+ * @brief Function to handle the file write operation
+ * @details This function is called when the device is written to
+ * @param file
+ * @param buf
+ * @param count
+ * @param f_pos
+ * @return 0 on success
+ * @retval -EINVAL on failure
+ * @retval -EACCES on failure
+ */
+
 ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offset)
 {
     int32_t ret;
     int32_t pid;
     int32_t data;
     int32_t index;
+    char *buffer;
 
     mutex_lock(&mutex);
+    buffer = (char *)kmalloc(len, GFP_KERNEL);
     pid = current->pid;
     index = get_process_index(pid);
 
-    if (len != sizeof(int32_t))
-    {
-        ret = -EFAULT;
-        goto out;
-    }
-
-    ret = access_ok((int *)buf, sizeof(int));
-    if (ret == 0)
-    {
-        printk(KERN_ALERT "access_ok failed\n");
-        ret = -EACCES;
-        goto out;
-    }
-
-    ret = copy_from_user(&data, (int32_t *)buf, sizeof(int32_t));
-    if (ret != 0)
-    {
-        printk(KERN_ALERT "copy_from_user failed\n");
-        ret = -EACCES;
-        goto out;
-    }
-
-    index = get_process_index(pid);
     if (index == -1 || process_list[index] == NULL)
     {
         printk(KERN_ALERT "process not found\n");
@@ -404,9 +520,17 @@ ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offse
         goto out;
     }
 
-    printk(KERN_ALERT "[%d] Deque LKM: %d [%d]\n", pid, data, process_list[index]->deque != NULL);
+    ret = copy_from_user(buffer, (char *)buf, len);
+    if (ret != 0)
+    {
+        printk(KERN_ALERT "copy_from_user failed\n");
+        ret = -EACCES;
+        goto out;
+    }
+
     if (process_list[index]->deque->capacity == 0)
     {
+        data = buffer[0];
         if (data < 1 || data > 100)
         {
             printk(KERN_ALERT "Invalid data\n");
@@ -415,24 +539,40 @@ ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offse
         }
         ret = set_capacity(&(process_list[index]->deque), data);
     }
-    else if (data % 2 == 0)
-        ret = push_right(process_list[index]->deque, data);
     else
-        ret = push_left(process_list[index]->deque, data);
-
-    if (ret != 0)
     {
-        printk(KERN_ALERT "push failed\n");
-        ret = -EACCES;
-        goto out;
+        data = *(int32_t *)buffer;
+        if (data % 2 == 0)
+            ret = push_right(process_list[index]->deque, data);
+        else
+            ret = push_left(process_list[index]->deque, data);
+        if (ret != 0)
+        {
+            printk(KERN_ALERT "push failed\n");
+            ret = -EACCES;
+            goto out;
+        }
+        else
+            ret = sizeof(int32_t);
     }
-    else
-        ret = sizeof(int32_t);
 
 out:
+    kfree(buffer);
     mutex_unlock(&mutex);
     return ret;
 }
+
+/**
+ * @brief Function to handle the file ioctl operation
+ * @details This function is called when the device is ioctl'd
+ * @param file
+ * @param cmd
+ * @param arg
+ * @return 0 on success
+ * @return -EINVAL on invalid ioctl
+ * @return -EACCES on invalid argument
+ * @return -EFAULT on invalid pointer
+ */
 
 long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
 {

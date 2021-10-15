@@ -74,7 +74,7 @@ int push_right(struct Deque *deque, int32_t data);
 int push_left(struct Deque *deque, int32_t data);
 int pop_right(struct Deque *deque, int32_t *data);
 int pop_left(struct Deque *deque, int32_t *data);
-int get_info(struct Deque *deque, struct obj_info *info);
+int get_info(struct Deque *deque, struct obj_info **info);
 
 static int file_open(struct inode *inode, struct file *file);                              // Handles the open request
 static int file_close(struct inode *inode, struct file *file);                             // Handles the close request
@@ -235,8 +235,88 @@ int get_info(struct Deque *deque, struct obj_info **info)
     return 0;
 }
 
-int file_open(struct inode *inode, struct file *file) { return 0; }
-int file_close(struct inode *inode, struct file *file) { return 0; }
+int file_open(struct inode *inode, struct file *file)
+{
+    int32_t ret;
+    int32_t pid;
+    int32_t index;
+
+    mutex_lock(&mutex);
+    pid = current->pid;
+    index = get_process_index(pid);
+
+    if (index == -1)
+    {
+        printk(KERN_ALERT "Process not found\n");
+        ret = -EACCES;
+    }
+    else if (process_list[index]->deque != NULL && process_list[index]->pid == pid)
+    {
+        printk(KERN_ALERT "Process already exists\n");
+        ret = -EACCES;
+    }
+    else
+    {
+        createProc(&process_list[index], pid);
+        if (process_list[index] == NULL)
+        {
+            printk(KERN_ALERT "Process cannot be created\n");
+            ret = -EACCES;
+        }
+        else
+        {
+            createDeque(&process_list[index]->deque, 0);
+            if (process_list[index]->deque == NULL)
+            {
+                printk(KERN_ALERT "Deque cannot be created\n");
+                ret = -EACCES;
+            }
+            else
+            {
+                ret = 0;
+            }
+        }
+    }
+
+    printk(KERN_ALERT "[%d] Deque LKM: File Opened\n", pid);
+    mutex_unlock(&mutex);
+    return 0;
+}
+
+int file_close(struct inode *inode, struct file *file)
+{
+    int32_t ret;
+    int32_t pid;
+    int32_t index;
+
+    mutex_lock(&mutex);
+    pid = current->pid;
+    index = get_process_index(pid);
+
+    if (index == -1)
+    {
+        printk(KERN_ALERT "Process not found\n");
+        ret = -EACCES;
+    }
+    else if (process_list[index]->deque == NULL || process_list[index]->pid != pid)
+    {
+        printk(KERN_ALERT "Process not found\n");
+        ret = -EACCES;
+    }
+    else
+    {
+        kfree(process_list[index]->deque);
+        process_list[index]->deque = NULL;
+        kfree(process_list[index]);
+        process_list[index] = NULL;
+        ret = 0;
+    }
+
+    printk(KERN_ALERT "[%d] Deque LKM: File Closed\n", pid);
+    mutex_unlock(&mutex);
+    return 0;
+}
+
 ssize_t file_read(struct file *file, char *buf, size_t len, loff_t *offset) { return 0; }
 ssize_t file_write(struct file *file, const char *buf, size_t len, loff_t *offset) { return 0; }
 
@@ -274,7 +354,7 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
         }
         if (data > 100 || data < 0)
         {
-            err = -EINVAL;
+            ret = -EINVAL;
             goto out;
         }
         index = get_process_index(pid);
@@ -371,19 +451,20 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             ret = -EACCES;
             goto out;
         }
-        if (!access_ok((int32_t *)arg, sizeof(int32_t)))
+        if (!access_ok((int32_t *)args, sizeof(int32_t)))
         {
             printk(KERN_ALERT "access_ok failed\n");
             ret = -EACCES;
             goto out;
         }
-        ret = copy_to_user((int *)args, &data, sizeof(int));
+        ret = copy_to_user((int32_t *)args, &data, sizeof(int32_t));
         if (ret != 0)
         {
             printk(KERN_ALERT "copy_to_user failed\n");
             ret = -EACCES;
             goto out;
         }
+        break;
     case PB2_EXTRACT_RIGHT:
         index = get_process_index(pid);
         if (index == -1 || process_list[index] == NULL)
@@ -399,7 +480,7 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             ret = -EACCES;
             goto out;
         }
-        if (!access_ok((int32_t *)arg, sizeof(int32_t)))
+        if (!access_ok((int32_t *)args, sizeof(int32_t)))
         {
             printk(KERN_ALERT "access_ok failed\n");
             ret = -EACCES;
@@ -412,6 +493,7 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             ret = -EACCES;
             goto out;
         }
+        break;
     case PB2_GET_INFO:
         index = get_process_index(pid);
         if (index == -1 || process_list[index] == NULL)
@@ -429,7 +511,7 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             goto out;
         }
 
-        if (!access_ok((struct obj_info *)arg, sizeof(struct obj_info)))
+        if (!access_ok((struct obj_info *)args, sizeof(struct obj_info)))
         {
             printk(KERN_ALERT "access_ok failed\n");
             ret = -EACCES;
@@ -443,6 +525,7 @@ long file_ioctl(struct file *file, unsigned int cmd, unsigned long args)
             ret = -EACCES;
             goto out;
         }
+        break;
     default:
         printk(KERN_ALERT "Invalid Command\n");
         ret = -EINVAL;
